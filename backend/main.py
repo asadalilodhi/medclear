@@ -186,6 +186,7 @@ def run_rag_evaluation(hospital: str, income: float, household: int):
 
 
 @app.post("/api/chat")
+@app.post("/chat")
 def chat_endpoint(req: ChatRequest):
     system_prompt = """You are MedClear, a compassionate, highly secure medical financial navigator. 
 Your goal is to gather the following from the user in a gentle, conversational way:
@@ -251,6 +252,7 @@ Once you have ALL pieces of information gathered, instead of <STATE>, you MUST a
 
 
 @app.post("/api/extract-bill")
+@app.post("/extract-bill")
 async def extract_bill(file: UploadFile = File(...)):
     messages = [
         {
@@ -290,6 +292,7 @@ async def extract_bill(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail="Failed to extract data via Vision API")
 
 @app.get("/api/policies")
+@app.get("/policies")
 def get_policies():
     try:
         res = supabase.table("hospital_policies").select("id, hospital_name, policy_url").execute()

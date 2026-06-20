@@ -50,16 +50,25 @@ def scrape_hospital_smart(hospital_name: str):
     
     for attempt in range(3):
         try:
-            prompt = f"Return ONLY the exact URL for the official financial assistance policy of {hospital_name}. Do not include any other text, markdown, or explanation. Start with https://"
-            if previous_urls:
-                prompt += f"\\n\\nWARNING: The following URLs are 404 dead links or incorrect. Do NOT return these:\\n" + "\\n".join(previous_urls)
+            from duckduckgo_search import DDGS
+            results = DDGS().text(f"{hospital_name} financial assistance policy", max_results=3)
+            if not results:
+                print("  -> Search returned no results.")
+                break
+            
+            # Find the first valid new URL
+            url = None
+            for r in results:
+                href = r.get('href', '')
+                if href not in previous_urls and href.startswith("http"):
+                    url = href
+                    break
+            
+            if not url:
+                print("  -> Search returned no new/valid URLs.")
+                break
                 
-            res = client.chat.completions.create(
-                model=CHAT_MODEL,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.3 + (attempt * 0.2)
-            )
-            url = res.choices[0].message.content.strip()
+            print(f"  [Attempt {attempt+1}] Found URL via DDGS Search: {url}")
             
             if not url.startswith("http"):
                 continue
