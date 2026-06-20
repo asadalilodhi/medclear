@@ -1,0 +1,26 @@
+{
+  "Johns Hopkins": {
+    "discount_tiers": [
+      {"max_fpl": 200, "discount_percentage": 100},
+      {"max_fpl": 300, "discount_percentage": 50}
+    ],
+    "disclaimer": "This applies to medically necessary care. You must apply within 240 days of the first post-discharge billing statement.",
+    "application_link": "https://www.hopkinsmedicine.org/patient_care/patients-visitors/billing-insurance/financial-assistance"
+  },
+  "Mayo Clinic": {
+    "discount_tiers": [
+      {"max_fpl": 200, "discount_percentage": 100},
+      {"max_fpl": 400, "discount_percentage": 75}
+    ],
+    "disclaimer": "Applies only to care at Mayo Clinic locations. Excludes cosmetic or elective procedures.",
+    "application_link": "https://www.mayoclinic.org/patient-visitor-guide/billing-insurance/financial-assistance"
+  },
+  "Cleveland Clinic": {
+    "discount_tiers": [
+      {"max_fpl": 250, "discount_percentage": 100},
+      {"max_fpl": 400, "discount_percentage": 50}
+    ],
+    "disclaimer": "Includes free care for patients under 250% FPL. Documentation of income is required.",
+    "application_link": "https://my.clevelandclinic.org/patients/billing-finance/financial-assistance"
+  }
+}
