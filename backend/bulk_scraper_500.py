@@ -80,8 +80,9 @@ def scrape_hospital_smart(hospital_name: str):
                 continue
                 
             lower_text = markdown_text[:1000].lower()
-            if "404" in lower_text and "not found" in lower_text:
-                print("  -> Soft 404 detected.")
+            bad_phrases = ["page not found", "error 404", "404 error", "doesn't exist", "does not exist", "can't be reached", "cannot be reached", "access denied", "whoops", "ooops"]
+            if any(p in lower_text for p in bad_phrases) or ("404" in lower_text and "not found" in lower_text):
+                print("  -> Soft 404 or Error Page detected.")
                 previous_urls.append(url)
                 continue
                 
@@ -90,6 +91,19 @@ def scrape_hospital_smart(hospital_name: str):
                 previous_urls.append(url)
                 continue
                 
+            if len(markdown_text) < 2000:
+                print(f"  -> Page content too short ({len(markdown_text)} chars). Likely a 404 stub or blocked page.")
+                previous_urls.append(url)
+                continue
+
+            print("  -> Running AI Verification...")
+            verify_prompt = f"You are an AI auditor. Read the following markdown scraped from a hospital website.\\nIs this actually a Financial Assistance Policy, or is it an Error/404/Page Not Found/Stub page?\\nIf it is a valid policy or contains valid policy information, reply exactly 'YES_VALID'.\\nIf it is an error page, 404, 'page not found', 'unavailable', or lacks any actual policy details, reply exactly 'NO_INVALID'.\\n\\nTEXT:\\n{markdown_text[:2500]}"
+            v_res = client.chat.completions.create(model=CHAT_MODEL, messages=[{"role": "user", "content": verify_prompt}], temperature=0.0)
+            if "NO_INVALID" in v_res.choices[0].message.content.upper():
+                print("  -> AI rejected this page as a stub/error.")
+                previous_urls.append(url)
+                continue
+
             print("  -> URL verified! Inserting into DB.")
             supabase.table("hospital_policies").insert({
                 "hospital_name": hospital_name.lower(),
@@ -121,7 +135,17 @@ def run_bulk_scraper():
                 total_scraped += 1
             time.sleep(1) # delay between hospitals to avoid LLM rate limits
             
-    print(f"\\nFinished! Successfully scraped {total_scraped} hospitals out of {target}.")
+    print(f"\nFinished! Successfully scraped {total_scraped} hospitals out of {target}.")
 
 if __name__ == "__main__":
-    run_bulk_scraper()
+    while True:
+        try:
+            print("Starting/Restarting Bulk Scraper...")
+            run_bulk_scraper()
+            print("Finished successfully!")
+            break
+        except Exception as e:
+            print(f"Scraper crashed with error: {e}")
+            print("Sleeping for 5 seconds and restarting...")
+            import time
+            time.sleep(5)
