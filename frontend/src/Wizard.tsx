@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, Send, Loader2, CheckCircle2, ShieldCheck } from 'lucide-react';
 import DataDrawer, { type ExtractedData } from './components/DataDrawer';
+import imageCompression from 'browser-image-compression';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -79,8 +80,15 @@ const Wizard = () => {
 
     setIsProcessing(true);
     try {
+      const options = {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true
+      };
+      const compressedFile = await imageCompression(file, options);
+      
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', compressedFile);
       const API_URL = import.meta.env.VITE_API_URL || '';
       const res = await fetch(`${API_URL}/api/extract-bill`, {
         method: 'POST',

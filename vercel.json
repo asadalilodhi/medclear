@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "backend/main.py": {
+      "maxDuration": 60
+    }
+  },
   "experimentalServices": {
     "frontend": {
       "entrypoint": "frontend/package.json",
