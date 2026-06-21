@@ -7,6 +7,8 @@ const LandingPage = () => {
   const [stats, setStats] = useState({ hospitals: 0, loading: true });
 
   useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+    
     const fetchStats = async () => {
       try {
         const API_URL = import.meta.env.VITE_API_URL || '';
@@ -17,13 +19,19 @@ const LandingPage = () => {
         setStats(prev => ({ ...prev, loading: false }));
       }
     };
-    fetchStats();
+    
+    fetchStats(); // Initial fetch
+    intervalId = setInterval(fetchStats, 5000); // Live poll every 5s
+
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
       e.returnValue = '';
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      clearInterval(intervalId);
+    };
   }, []);
 
   return (

@@ -10,6 +10,8 @@ const DataSourcesPage = () => {
   const filteredPolicies = policies.filter(p => p.hospital_name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
     const fetchPolicies = async () => {
       try {
         const API_URL = import.meta.env.VITE_API_URL || '';
@@ -22,7 +24,11 @@ const DataSourcesPage = () => {
         setLoading(false);
       }
     };
-    fetchPolicies();
+    
+    fetchPolicies(); // Initial fetch
+    intervalId = setInterval(fetchPolicies, 5000); // Live poll every 5s
+
+    return () => clearInterval(intervalId);
   }, []);
 
   return (
