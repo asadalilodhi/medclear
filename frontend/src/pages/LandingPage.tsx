@@ -7,7 +7,7 @@ const LandingPage = () => {
   const [stats, setStats] = useState({ hospitals: 0, loading: true });
 
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
+    let intervalId: ReturnType<typeof setInterval>;
     
     const fetchStats = async () => {
       try {

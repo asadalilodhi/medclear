@@ -10,7 +10,7 @@ const DataSourcesPage = () => {
   const filteredPolicies = policies.filter(p => p.hospital_name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
+    let intervalId: ReturnType<typeof setInterval>;
 
     const fetchPolicies = async () => {
       try {
