@@ -45,7 +45,7 @@ if not supabase_url or not supabase_key:
 
 supabase: Client = create_client(supabase_url, supabase_key)
 
-VISION_MODEL = "Qwen/Qwen2.5-VL-72B-Instruct"
+VISION_MODEL = "gpt-4o-mini"
 CHAT_MODEL = "meta-llama/Llama-3.3-70B-Instruct-Turbo"
 
 class ChatMessage(BaseModel):
