@@ -203,7 +203,7 @@ AT THE END OF EVERY SINGLE MESSAGE, you MUST append a JSON block tracking the cu
 
 Once you have ALL pieces of information gathered, instead of <STATE>, you MUST append a JSON block EXACTLY like this (and nothing else after it):
 <EVALUATE>{"hospital": "Mayo Clinic", "income": 35000, "household": 1}</EVALUATE>
-"""
+CRITICAL: Do NOT output <EVALUATE> if income or household are null, 'unknown', or missing. You MUST wait until you have actual numerical values.
     
     msgs = [{"role": "system", "content": system_prompt}]
     for m in req.messages:
@@ -229,12 +229,30 @@ Once you have ALL pieces of information gathered, instead of <STATE>, you MUST a
         if trigger_match:
             try:
                 params = json.loads(trigger_match.group(1))
-                reply = reply.replace(trigger_match.group(0), "").strip()
-                evaluation_result = run_rag_evaluation(params.get('hospital', ''), params.get('income', 0), params.get('household', 1))
-                current_state = {"hospital": params.get('hospital'), "income": params.get('income'), "household": params.get('household')}
+                income = params.get('income')
+                household = params.get('household')
+                
+                # If LLM prematurely triggers EVALUATE without valid numbers, downgrade it to a STATE update
+                if income is None or household is None or str(income).lower() == 'unknown' or str(household).lower() == 'unknown':
+                    current_state = {"hospital": params.get('hospital'), "income": income, "household": household}
+                    reply = reply.replace(trigger_match.group(0), "").strip()
+                    trigger_match = None # Nullify trigger so it doesn't evaluate
+                else:
+                    reply = reply.replace(trigger_match.group(0), "").strip()
+                    
+                    # Sanitize inputs
+                    try:
+                        clean_income = float(income)
+                        clean_household = int(household)
+                        evaluation_result = run_rag_evaluation(params.get('hospital', ''), clean_income, clean_household)
+                    except (ValueError, TypeError):
+                        evaluation_result = {"error": True, "message": "Invalid numerical values provided for income or household size."}
+                        
+                    current_state = {"hospital": params.get('hospital'), "income": income, "household": household}
             except Exception as e:
                 print(f"Trigger parse error: {e}")
-        elif state_match:
+        
+        if not trigger_match and state_match:
             try:
                 current_state = json.loads(state_match.group(1))
                 reply = reply.replace(state_match.group(0), "").strip()
