@@ -197,7 +197,7 @@ def run_rag_evaluation(hospital: str, income: float, household: int):
                 print(f"HALLUCINATION BLOCKED: Quote '{quote}' not found in policy.")
                 return {
                     "error": True,
-                    "message": "SECURITY ALERT: The AI generated a response that could not be structurally verified against the official policy text. To ensure your safety and prevent hallucination, this evaluation was blocked.",
+                    "message": f"SECURITY ALERT: The AI generated a response that could not be structurally verified against the official policy text. To ensure your safety and prevent hallucination, this evaluation was blocked.\n\n**Diagnostics:**\n- **Hospital:** {hospital}\n- **Policy URL:** {policy['policy_url']}\n- **Attempted Quote:** \"{quote}\"",
                     "url": policy['policy_url']
                 }
             
