@@ -1,10 +1,23 @@
 import { Link } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Shield, FileText, Lock, ChevronRight, Database, HeartHandshake } from 'lucide-react';
 
 const LandingPage = () => {
+  const [stats, setStats] = useState({ hospitals: 0, loading: true });
+
   useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const API_URL = import.meta.env.VITE_API_URL || '';
+        const res = await fetch(`${API_URL}/api/policies`);
+        const data = await res.json();
+        if (data.policies) setStats({ hospitals: data.policies.length, loading: false });
+      } catch (e) {
+        setStats(prev => ({ ...prev, loading: false }));
+      }
+    };
+    fetchStats();
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
       e.returnValue = '';
@@ -86,9 +99,18 @@ const LandingPage = () => {
           {/* Trust Bar (Soft) */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.8 }} className="py-12 mb-32 bg-brand-surface rounded-3xl shadow-sm border border-brand-primary/5">
             <div className="flex flex-col md:flex-row justify-around items-center gap-8 text-sm font-bold text-brand-primary uppercase tracking-widest">
-              <div className="flex items-center"><Lock className="w-5 h-5 mr-3 text-brand-accent"/> Zero Data Retention</div>
-              <div className="flex items-center"><Shield className="w-5 h-5 mr-3 text-brand-accent"/> HIPAA Grade Security</div>
-              <div className="flex items-center"><Database className="w-5 h-5 mr-3 text-brand-accent"/> Official FPL Datasets</div>
+              <div className="flex items-center flex-col gap-2">
+                <div className="flex items-center"><Lock className="w-5 h-5 mr-3 text-brand-accent"/> Zero Data Retention</div>
+                <span className="text-xs text-brand-text/50 font-medium normal-case">No accounts, no history tracking</span>
+              </div>
+              <div className="flex items-center flex-col gap-2">
+                <div className="flex items-center"><Database className="w-5 h-5 mr-3 text-brand-accent"/> {stats.loading ? "Loading Index..." : `${stats.hospitals} Live Policies Indexed`}</div>
+                <span className="text-xs text-brand-text/50 font-medium normal-case">Powered by autonomous Jina scraping</span>
+              </div>
+              <div className="flex items-center flex-col gap-2">
+                <div className="flex items-center"><Shield className="w-5 h-5 mr-3 text-brand-accent"/> 2026 HHS Standards</div>
+                <span className="text-xs text-brand-text/50 font-medium normal-case">Strict compliance with FPL thresholds</span>
+              </div>
             </div>
           </motion.div>
 

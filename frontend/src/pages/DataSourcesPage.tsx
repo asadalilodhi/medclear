@@ -5,6 +5,9 @@ import { Database, Link as LinkIcon, Activity, Search } from 'lucide-react';
 const DataSourcesPage = () => {
   const [policies, setPolicies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredPolicies = policies.filter(p => p.hospital_name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   useEffect(() => {
     const fetchPolicies = async () => {
@@ -55,11 +58,24 @@ const DataSourcesPage = () => {
           </div>
 
           <div className="max-w-4xl mx-auto w-full">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-heading font-bold text-brand-primary">Live RAG Index</h2>
-              <div className="flex items-center space-x-2 text-sm font-bold text-brand-accent uppercase tracking-widest bg-brand-accent/10 px-4 py-2 rounded-full">
-                <Activity className="w-4 h-4" />
-                <span>Real-Time Web Scraping</span>
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
+              <h2 className="text-2xl font-heading font-bold text-brand-primary">Live Index</h2>
+              
+              <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+                <div className="relative w-full sm:w-64">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-brand-text/40" />
+                  <input 
+                    type="text" 
+                    placeholder="Search hospitals..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-white border border-brand-primary/10 rounded-full py-2 pl-9 pr-4 text-sm font-medium focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20 transition-all placeholder:text-brand-text/40 shadow-sm"
+                  />
+                </div>
+                <div className="flex items-center space-x-2 text-sm font-bold text-brand-accent uppercase tracking-widest bg-brand-accent/10 px-4 py-2 rounded-full whitespace-nowrap w-full sm:w-auto justify-center">
+                  <Activity className="w-4 h-4" />
+                  <span>Real-Time Scraper</span>
+                </div>
               </div>
             </div>
 
@@ -74,9 +90,15 @@ const DataSourcesPage = () => {
                 <h3 className="text-xl font-heading font-bold text-brand-primary mb-2">Database is Empty</h3>
                 <p className="text-brand-text/70">The system has not scraped any hospital policies yet. Head to the Evaluate tab and ask about a hospital to trigger the autonomous web scraper!</p>
               </div>
+            ) : filteredPolicies.length === 0 ? (
+              <div className="bg-brand-surface border border-brand-primary/10 rounded-3xl p-12 text-center shadow-sm">
+                <Search className="w-12 h-12 text-brand-text/20 mx-auto mb-4" />
+                <h3 className="text-xl font-heading font-bold text-brand-primary mb-2">No Hospitals Found</h3>
+                <p className="text-brand-text/70">We couldn't find a hospital matching your search.</p>
+              </div>
             ) : (
               <div className="grid md:grid-cols-2 gap-6">
-                {policies.map((p) => (
+                {filteredPolicies.map((p) => (
                   <motion.div 
                     key={p.id}
                     whileHover={{ y: -5 }}
