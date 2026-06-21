@@ -23,10 +23,10 @@ const DataDrawer = ({ data }: DataDrawerProps) => {
     <>
       <button 
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-8 right-8 bg-brand-accent text-white px-8 py-5 rounded-sm shadow-2xl hover:bg-brand-primary transition-colors flex items-center z-40 border border-brand-accent-light"
+        className="fixed bottom-6 right-6 bg-brand-accent text-white px-5 py-3 rounded-sm shadow-xl hover:bg-brand-primary transition-colors flex items-center z-40 border border-brand-accent-light"
       >
-        <ClipboardList className="w-6 h-6 mr-3" />
-        <span className="font-bold text-lg tracking-wide">DATA CHECKLIST ({completedCount}/{totalCount})</span>
+        <ClipboardList className="w-5 h-5 mr-2" />
+        <span className="font-bold text-sm tracking-wide">DATA CHECKLIST ({completedCount}/{totalCount})</span>
       </button>
 
       <AnimatePresence>
