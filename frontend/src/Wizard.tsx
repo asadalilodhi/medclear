@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, Send, Loader2, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { Camera, Send, Loader2, CheckCircle2, ShieldCheck, ExternalLink } from 'lucide-react';
 import DataDrawer, { type ExtractedData } from './components/DataDrawer';
 import imageCompression from 'browser-image-compression';
 
@@ -250,9 +250,25 @@ const Wizard = () => {
                         <p className="text-xs uppercase tracking-widest text-brand-primary font-bold mb-2">Verified Policy Quote</p>
                         <p className="font-serif italic text-brand-text">"{evaluation.quote}"</p>
                       </div>
-                      <div className="flex justify-between items-center bg-brand-offwhite p-4 rounded-xl text-sm font-medium border border-brand-primary/5">
-                        <span className="text-brand-text/70">Calculated FPL: <strong className="text-brand-primary">{evaluation.fpl}%</strong></span>
-                        <a href={evaluation.url} target="_blank" rel="noreferrer" className="text-brand-accent font-bold hover:underline">Read Source Policy</a>
+                      <div className="flex flex-col gap-4 mt-6">
+                        <div className="flex justify-between items-center bg-brand-offwhite p-4 rounded-xl text-sm font-medium border border-brand-primary/5">
+                          <span className="text-brand-text/70">Calculated FPL: <strong className="text-brand-primary">{evaluation.fpl}%</strong></span>
+                          <span className="text-brand-text/70">Status: <strong className={evaluation.eligible ? "text-green-600" : "text-red-500"}>{evaluation.eligible ? "Eligible" : "Not Eligible"}</strong></span>
+                        </div>
+                        
+                        <a href={evaluation.url} target="_blank" rel="noreferrer" className="flex items-center justify-between bg-white border-2 border-brand-primary/10 hover:border-brand-accent p-4 rounded-xl group transition-all">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-brand-primary group-hover:text-brand-accent transition-colors">Verify Official Hospital Policy</span>
+                            <span className="text-xs text-brand-text/60 mt-1">{(() => {
+                              try {
+                                return new URL(evaluation.url).hostname;
+                              } catch(e) {
+                                return evaluation.url;
+                              }
+                            })()}</span>
+                          </div>
+                          <ExternalLink className="w-5 h-5 text-brand-accent group-hover:translate-x-1 transition-transform" />
+                        </a>
                       </div>
                     </>
                   )}

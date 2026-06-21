@@ -154,7 +154,7 @@ def run_rag_evaluation(hospital: str, income: float, household: int):
     You MUST output a JSON object with:
     - eligible (boolean)
     - exact_quote (string): An EXACT, word-for-word substring from the policy text that proves this determination. If the policy text appears to be a spam site, 404 page, or irrelevant, output an empty string "".
-    - determination (string): A compassionate explanation of what they qualify for. (If the policy text is irrelevant, explain that we couldn't find the official rules).
+    - determination (string): A compassionate, extremely user-friendly explanation of what they qualify for. Write this as if you are a warm human talking to a friend. Use an 8th-grade reading level. Avoid dense, bureaucratic, or overly formal language. Be direct and comforting. (If the policy text is irrelevant, explain that we couldn't find the official rules).
     """
     
     try:
