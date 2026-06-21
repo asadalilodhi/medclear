@@ -62,68 +62,59 @@ class ChatRequest(BaseModel):
     messages: List[ChatMessage]
 
 def scrape_hospital_policy(hospital_name: str):
-    print(f"Scraping official policy for {hospital_name} using Smart Self-Healing Scraper...")
+    print(f"Scraping official policy for {hospital_name} using DuckDuckGo + Jina + LLM...")
     
-    previous_urls = []
-    
-    for attempt in range(3): # Max 3 LLM attempts
-        try:
-            prompt = f"Return ONLY the exact URL for the official financial assistance policy of {hospital_name}. Do not include any other text, markdown, or explanation. Start with https://"
-            if previous_urls:
-                prompt += f"\\n\\nWARNING: The following URLs are 404 dead links or do not contain financial assistance data. Do NOT return these:\\n" + "\\n".join(previous_urls)
-                
-            res = client.chat.completions.create(
-                model=CHAT_MODEL,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.3 + (attempt * 0.2) # Increase temp slightly on retries to force different URLs
-            )
-            url = res.choices[0].message.content.strip()
+    try:
+        import urllib.request
+        import urllib.parse
+        
+        # 1. Search DDG via Jina
+        query = urllib.parse.quote(f"{hospital_name} official financial assistance policy")
+        req = urllib.request.Request(f"https://r.jina.ai/https://html.duckduckgo.com/html/?q={query}", headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req) as response:
+            ddg_markdown = response.read().decode()
             
-            if not url.startswith("http"):
-                continue
-                
-            print(f" [Attempt {attempt+1}] AI proposed URL: {url}")
+        # 2. Extract best URL using LLM
+        prompt = f"Here are the search results for the financial assistance policy of '{hospital_name}'.\n\n{ddg_markdown[:8000]}\n\nExtract the single most likely official hospital URL that contains the actual financial assistance policy. Look for the raw domain name in the markdown like [www.hospital.org/...] and output ONLY that valid https URL (e.g. https://www.hospital.org/path). Do NOT output a duckduckgo redirect link. If no relevant hospital link is found, output 'NOT_FOUND'."
+        
+        res = client.chat.completions.create(
+            model=CHAT_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.1
+        )
+        url = res.choices[0].message.content.strip()
+        
+        if not url.startswith("http"):
+            print("LLM failed to find a valid URL.")
+            return None
             
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-            }
-            req = urllib.request.Request(f"https://r.jina.ai/{url}", headers=headers)
-            with urllib.request.urlopen(req) as response:
-                markdown_text = response.read().decode()
-                
-            # Verify it's not a soft 404
-            lower_text = markdown_text[:1000].lower()
-            if "404" in lower_text and "not found" in lower_text:
-                print(" -> Soft 404 detected. Forcing AI retry.")
-                previous_urls.append(url)
-                continue
-                
-            # Verify it actually contains hospital/financial terms
-            if "financial" not in markdown_text.lower() and "assistance" not in markdown_text.lower():
-                print(" -> Page lacks financial assistance content. Forcing AI retry.")
-                previous_urls.append(url)
-                continue
-                
-            print(" -> URL verified successfully!")
-                
-            # Save to Supabase
-            supabase.table("hospital_policies").insert({
-                "hospital_name": hospital_name.lower(),
-                "policy_text": markdown_text[:15000],
-                "policy_url": url
-            }).execute()
+        print(f"Extracted target URL: {url}")
+        
+        # 3. Scrape target URL via Jina
+        req2 = urllib.request.Request(f"https://r.jina.ai/{url}", headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req2) as response2:
+            policy_markdown = response2.read().decode()
             
-            return {
-                "hospital_name": hospital_name.lower(),
-                "policy_text": markdown_text[:15000],
-                "policy_url": url
-            }
-        except Exception as e:
-            print(f" -> Error checking URL: {e}")
-            previous_urls.append(url)
+        if "financial" not in policy_markdown.lower() and "assistance" not in policy_markdown.lower():
+            print("Page lacks financial assistance content.")
+            return None
             
-    print(f"Failed to securely scrape policy for {hospital_name} after 3 attempts.")
-    return None
+        print("URL verified successfully!")
+        
+        supabase.table("hospital_policies").insert({
+            "hospital_name": hospital_name.lower(),
+            "policy_text": policy_markdown[:15000],
+            "policy_url": url
+        }).execute()
+        
+        return {
+            "hospital_name": hospital_name.lower(),
+            "policy_text": policy_markdown[:15000],
+            "policy_url": url
+        }
+    except Exception as e:
+        print(f"Error checking URL: {e}")
+        return None
 
 def run_rag_evaluation(hospital: str, income: float, household: int):
     # 1. Fetch from true Supabase DB
@@ -262,24 +253,41 @@ CRITICAL: Do NOT output <EVALUATE> if income or household are null, 'unknown', o
                 params = json.loads(trigger_match.group(1))
                 income = params.get('income')
                 household = params.get('household')
+                hospital = params.get('hospital', '')
                 
                 # If LLM prematurely triggers EVALUATE without valid numbers, downgrade it to a STATE update
                 if income is None or household is None or str(income).lower() == 'unknown' or str(household).lower() == 'unknown':
-                    current_state = {"hospital": params.get('hospital'), "balance": params.get('balance'), "income": income, "household": household}
+                    current_state = {"hospital": hospital, "balance": params.get('balance'), "income": income, "household": household}
                     reply = reply.replace(trigger_match.group(0), "").strip()
                     trigger_match = None # Nullify trigger so it doesn't evaluate
                 else:
                     reply = reply.replace(trigger_match.group(0), "").strip()
+                    current_state = {"hospital": hospital, "balance": params.get('balance'), "income": income, "household": household}
                     
-                    # Sanitize inputs
+                    # Check if hospital is in DB
+                    db_check = supabase.table("hospital_policies").select("id").ilike("hospital_name", f"%{hospital.lower()}%").execute()
+                    
                     try:
                         clean_income = float(income)
                         clean_household = int(household)
-                        evaluation_result = run_rag_evaluation(params.get('hospital', ''), clean_income, clean_household)
+                        
+                        if not db_check.data:
+                            # Not in DB -> notify frontend to trigger scrape
+                            return {
+                                "reply": reply,
+                                "state": current_state,
+                                "trigger_scrape": True,
+                                "eval_params": {
+                                    "hospital": hospital,
+                                    "income": clean_income,
+                                    "household": clean_household
+                                }
+                            }
+                        else:
+                            # In DB -> evaluate immediately
+                            evaluation_result = run_rag_evaluation(hospital, clean_income, clean_household)
                     except (ValueError, TypeError):
                         evaluation_result = {"error": True, "message": "Invalid numerical values provided for income or household size."}
-                        
-                    current_state = {"hospital": params.get('hospital'), "balance": params.get('balance'), "income": income, "household": household}
             except Exception as e:
                 print(f"Trigger parse error: {e}")
         
@@ -298,6 +306,22 @@ CRITICAL: Do NOT output <EVALUATE> if income or household are null, 'unknown', o
     except Exception as e:
         print(f"Chat error: {e}")
         raise HTTPException(status_code=500, detail="Failed to communicate with AI agent.")
+
+
+class EvaluateRequest(BaseModel):
+    hospital: str
+    income: float
+    household: int
+
+@app.post("/api/evaluate")
+@app.post("/evaluate")
+def evaluate_endpoint(req: EvaluateRequest):
+    try:
+        result = run_rag_evaluation(req.hospital, req.income, req.household)
+        return {"evaluation": result}
+    except Exception as e:
+        print(f"Eval error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to evaluate")
 
 
 @app.post("/api/extract-bill")

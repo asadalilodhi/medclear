@@ -75,10 +75,31 @@ const Wizard = () => {
           householdSize: data.state.household || prev.householdSize
         }));
       }
+
+      if (data.trigger_scrape && data.eval_params) {
+        setMessages(prev => [...prev, { role: 'assistant', content: `I noticed ${data.eval_params.hospital} is not in our active database. I am now initiating an autonomous web search to securely find and verify their official financial assistance policy. This usually takes about 15 seconds...` }]);
+        setProcessingStep('Scraping the web for policy...');
+        
+        try {
+          const evalRes = await fetch(`${API_URL}/api/evaluate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data.eval_params)
+          });
+          const evalData = await evalRes.json();
+          if (evalData.evaluation) {
+            setEvaluation(evalData.evaluation);
+          }
+        } catch (e) {
+            setMessages(prev => [...prev, { role: 'assistant', content: "I encountered an error while trying to scrape the web for the policy." }]);
+        }
+      }
+
     } catch (e) {
       setMessages(prev => [...prev, { role: 'assistant', content: "I'm having trouble connecting to the secure server. Please make sure the backend is running." }]);
     } finally {
       setIsProcessing(false);
+      setProcessingStep('');
     }
   };
 
