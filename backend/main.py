@@ -180,15 +180,26 @@ def run_rag_evaluation(hospital: str, income: float, household: int):
         
         # 4. STRUCTURAL HALLUCINATION CHECK
         quote = result.get("exact_quote", "")
-        # Remove whitespace for a more robust check, but strictly check presence
-        # For strictness as requested, we do a pure substring check.
-        if quote and quote not in policy['policy_text']:
-            print(f"HALLUCINATION BLOCKED: Quote '{quote}' not found in policy.")
-            return {
-                "error": True,
-                "message": "SECURITY ALERT: The AI generated a response that could not be structurally verified against the official policy text. To ensure your safety and prevent hallucination, this evaluation was blocked.",
-                "url": policy['policy_url']
-            }
+        
+        if quote:
+            # Normalize whitespace and punctuation for a robust substring check
+            import re
+            def normalize(t):
+                # Replace whitespace clusters with single space, remove punctuation, lower case
+                t = re.sub(r'\s+', ' ', t)
+                t = re.sub(r'[^\w\s]', '', t)
+                return t.lower().strip()
+                
+            norm_quote = normalize(quote)
+            norm_policy = normalize(policy['policy_text'])
+            
+            if norm_quote not in norm_policy:
+                print(f"HALLUCINATION BLOCKED: Quote '{quote}' not found in policy.")
+                return {
+                    "error": True,
+                    "message": "SECURITY ALERT: The AI generated a response that could not be structurally verified against the official policy text. To ensure your safety and prevent hallucination, this evaluation was blocked.",
+                    "url": policy['policy_url']
+                }
             
         return {
             "error": False,
