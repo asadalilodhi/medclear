@@ -1,8 +1,14 @@
+# pyrefly: ignore [missing-import]
 import os
+# pyrefly: ignore [missing-import]
 import json
+# pyrefly: ignore [missing-import]
 import base64
+# pyrefly: ignore [missing-import]
 import re
+# pyrefly: ignore [missing-import]
 import urllib.request
+# pyrefly: ignore [missing-import]
 import urllib.parse
 # pyrefly: ignore [missing-import]
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
@@ -204,6 +210,7 @@ AT THE END OF EVERY SINGLE MESSAGE, you MUST append a JSON block tracking the cu
 Once you have ALL pieces of information gathered, instead of <STATE>, you MUST append a JSON block EXACTLY like this (and nothing else after it):
 <EVALUATE>{"hospital": "Mayo Clinic", "income": 35000, "household": 1}</EVALUATE>
 CRITICAL: Do NOT output <EVALUATE> if income or household are null, 'unknown', or missing. You MUST wait until you have actual numerical values.
+"""
     
     msgs = [{"role": "system", "content": system_prompt}]
     for m in req.messages:
