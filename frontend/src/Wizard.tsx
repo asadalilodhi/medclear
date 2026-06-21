@@ -24,6 +24,7 @@ const Wizard = () => {
 
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [selectedImagePreview, setSelectedImagePreview] = useState<string | null>(null);
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -55,7 +56,7 @@ const Wizard = () => {
       const res = await fetch(`${API_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newMessages })
+        body: JSON.stringify({ messages: newMessages.map(m => ({ role: m.role, content: m.content })) })
       });
       const data = await res.json();
       
@@ -126,18 +127,19 @@ const Wizard = () => {
       const data = await res.json();
       if (data.extracted_data) {
         const ext = data.extracted_data;
-        const msg = `I uploaded a bill. Extracted Data -> Hospital: ${ext.hospitalName || 'unknown'}, Amount: ${ext.totalAmount || 'unknown'}, Income: ${ext.grossIncome || 'unknown'}, Household Size: ${ext.householdSize || 'unknown'}.`;
         
-        // Remove the temporary image message and replace with the text message so the AI can process it
-        // Actually, we can just keep the image message in UI, and silently send the extracted text to the backend!
-        // To do this, we just call sendMessage without adding it to UI again, or we can just call sendMessage with the text.
-        setMessages(prev => {
-           const withoutLast = prev.slice(0, prev.length - 1);
-           return [...withoutLast, { role: 'user', content: msg, image: preview || undefined }];
-        });
+        setLiveState(prev => ({
+           ...prev,
+           hospitalName: ext.hospitalName !== 'unknown' ? ext.hospitalName : prev.hospitalName,
+           grossIncome: ext.grossIncome !== 'unknown' ? ext.grossIncome : prev.grossIncome,
+           householdSize: ext.householdSize !== 'unknown' ? ext.householdSize : prev.householdSize
+        }));
+
+        const assistantMsg = `I have successfully analyzed your medical bill. I extracted the following details:\n\n**Hospital:** ${ext.hospitalName || 'Unknown'}\n**Amount Due:** $${ext.totalAmount || 'Unknown'}\n\nTo see if you qualify for financial assistance, could you please tell me your household size and approximate annual income?`;
         
-        setIsProcessing(false); // sendMessage will set it to true again
-        await sendMessage(msg);
+        setMessages(prev => [...prev, { role: 'assistant', content: assistantMsg }]);
+        setIsProcessing(false);
+        setProcessingStep('');
       }
     } catch (error) {
       alert("Error processing image.");
@@ -147,6 +149,30 @@ const Wizard = () => {
 
   return (
     <div className="flex-grow flex items-center justify-center p-6 relative py-10 bg-brand-offwhite min-h-[calc(100vh-80px)]">
+      
+      {/* Fullscreen Image Modal */}
+      <AnimatePresence>
+        {fullscreenImage && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
+            onClick={() => setFullscreenImage(null)}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 cursor-zoom-out"
+          >
+            <div className="relative max-w-full max-h-full flex items-center justify-center">
+              <img src={fullscreenImage} alt="Fullscreen Bill" className="max-w-full max-h-[90vh] rounded-2xl object-contain shadow-2xl" />
+              <button 
+                onClick={(e) => { e.stopPropagation(); setFullscreenImage(null); }}
+                className="absolute -top-4 -right-4 bg-white/20 hover:bg-white text-white hover:text-black rounded-full w-10 h-10 flex items-center justify-center text-xl font-bold transition backdrop-blur-md"
+              >
+                ×
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <DataDrawer data={liveState} />
       <div className="w-full max-w-4xl bg-brand-surface rounded-3xl shadow-sm border border-brand-primary/5 flex flex-col h-[800px] overflow-hidden">
         
@@ -174,9 +200,14 @@ const Wizard = () => {
               >
                 <div className={`max-w-[80%] p-5 rounded-3xl ${m.role === 'user' ? 'bg-brand-primary text-white rounded-tr-sm' : 'bg-brand-surface border border-brand-primary/10 text-brand-text rounded-tl-sm shadow-sm'}`}>
                   {m.image && (
-                    <img src={m.image} alt="Uploaded bill" className="w-48 h-auto rounded-xl mb-3 border border-white/20 shadow-sm" />
+                    <img 
+                      src={m.image} 
+                      onClick={() => setFullscreenImage(m.image || null)}
+                      alt="Uploaded bill" 
+                      className="w-48 h-auto rounded-xl mb-3 border border-white/20 shadow-sm cursor-zoom-in hover:opacity-90 transition" 
+                    />
                   )}
-                  <p className="leading-relaxed font-medium">{m.content}</p>
+                  <p className="leading-relaxed font-medium whitespace-pre-line">{m.content}</p>
                 </div>
               </motion.div>
             ))}
