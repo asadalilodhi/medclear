@@ -67,11 +67,13 @@ const Wizard = () => {
         setEvaluation(data.evaluation);
       }
       if (data.state) {
-        setLiveState({
-          hospitalName: data.state.hospital || '',
-          grossIncome: data.state.income ? data.state.income.toString() : '',
-          householdSize: data.state.household ? data.state.household.toString() : ''
-        });
+        setLiveState(prev => ({
+          ...prev,
+          hospitalName: data.state.hospital || prev.hospitalName,
+          totalAmount: data.state.balance || prev.totalAmount,
+          grossIncome: data.state.income || prev.grossIncome,
+          householdSize: data.state.household || prev.householdSize
+        }));
       }
     } catch (e) {
       setMessages(prev => [...prev, { role: 'assistant', content: "I'm having trouble connecting to the secure server. Please make sure the backend is running." }]);
@@ -131,6 +133,7 @@ const Wizard = () => {
         setLiveState(prev => ({
            ...prev,
            hospitalName: ext.hospitalName !== 'unknown' ? ext.hospitalName : prev.hospitalName,
+           totalAmount: ext.totalAmount !== 'unknown' ? ext.totalAmount : prev.totalAmount,
            grossIncome: ext.grossIncome !== 'unknown' ? ext.grossIncome : prev.grossIncome,
            householdSize: ext.householdSize !== 'unknown' ? ext.householdSize : prev.householdSize
         }));

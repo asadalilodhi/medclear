@@ -164,7 +164,19 @@ def run_rag_evaluation(hospital: str, income: float, household: int):
             response_format={"type": "json_object"},
             temperature=0.0
         )
-        result = json.loads(res.choices[0].message.content)
+        raw_content = res.choices[0].message.content.strip()
+        if raw_content.startswith("```json"):
+            raw_content = raw_content[7:]
+        elif raw_content.startswith("```"):
+            raw_content = raw_content[3:]
+        if raw_content.endswith("```"):
+            raw_content = raw_content[:-3]
+            
+        try:
+            result = json.loads(raw_content.strip())
+        except Exception as e:
+            print(f"JSON Parse Error: {e} | Raw Content: {raw_content}")
+            return {"error": True, "message": "The system encountered an error parsing the official policy evaluation. Please restart the session and try again."}
         
         # 4. STRUCTURAL HALLUCINATION CHECK
         quote = result.get("exact_quote", "")
@@ -197,15 +209,16 @@ def chat_endpoint(req: ChatRequest):
     system_prompt = """You are MedClear, a compassionate, highly secure medical financial navigator. 
 Your goal is to gather the following from the user in a gentle, conversational way:
 1. Hospital Name
-2. Annual Gross Income
-3. Household Size
+2. Total Medical Bill Balance
+3. Annual Gross Income
+4. Household Size
 4. Any edge cases (disability, retirement, dependents)
 
 Only ask 1 or 2 questions at a time. Keep it conversational and supportive.
 If the user uploads a bill, the system will inject the extracted data. Acknowledge it.
 
 AT THE END OF EVERY SINGLE MESSAGE, you MUST append a JSON block tracking the current state of variables you know. Use null if unknown. Format EXACTLY like this:
-<STATE>{"hospital": "Mayo", "income": 35000, "household": null}</STATE>
+<STATE>{"hospital": "Mayo", "balance": 1500, "income": 35000, "household": null}</STATE>
 
 Once you have ALL pieces of information gathered, instead of <STATE>, you MUST append a JSON block EXACTLY like this (and nothing else after it):
 <EVALUATE>{"hospital": "Mayo Clinic", "income": 35000, "household": 1}</EVALUATE>
@@ -241,7 +254,7 @@ CRITICAL: Do NOT output <EVALUATE> if income or household are null, 'unknown', o
                 
                 # If LLM prematurely triggers EVALUATE without valid numbers, downgrade it to a STATE update
                 if income is None or household is None or str(income).lower() == 'unknown' or str(household).lower() == 'unknown':
-                    current_state = {"hospital": params.get('hospital'), "income": income, "household": household}
+                    current_state = {"hospital": params.get('hospital'), "balance": params.get('balance'), "income": income, "household": household}
                     reply = reply.replace(trigger_match.group(0), "").strip()
                     trigger_match = None # Nullify trigger so it doesn't evaluate
                 else:
@@ -255,7 +268,7 @@ CRITICAL: Do NOT output <EVALUATE> if income or household are null, 'unknown', o
                     except (ValueError, TypeError):
                         evaluation_result = {"error": True, "message": "Invalid numerical values provided for income or household size."}
                         
-                    current_state = {"hospital": params.get('hospital'), "income": income, "household": household}
+                    current_state = {"hospital": params.get('hospital'), "balance": params.get('balance'), "income": income, "household": household}
             except Exception as e:
                 print(f"Trigger parse error: {e}")
         
