@@ -59,7 +59,14 @@ const DataSourcesPage = () => {
 
           <div className="max-w-4xl mx-auto w-full">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
-              <h2 className="text-2xl font-heading font-bold text-brand-primary">Live Index</h2>
+              <div className="flex items-center gap-3">
+                <h2 className="text-2xl font-heading font-bold text-brand-primary">Live Index</h2>
+                {!loading && (
+                  <span className="bg-brand-primary/10 text-brand-primary font-bold px-3 py-1 rounded-full text-sm">
+                    {policies.length}
+                  </span>
+                )}
+              </div>
               
               <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
                 <div className="relative w-full sm:w-64">
