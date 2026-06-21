@@ -7,6 +7,7 @@ import imageCompression from 'browser-image-compression';
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  image?: string;
 }
 
 const Wizard = () => {
@@ -15,10 +16,14 @@ const Wizard = () => {
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingStep, setProcessingStep] = useState('');
   const [evaluation, setEvaluation] = useState<any>(null);
   const [liveState, setLiveState] = useState<ExtractedData>({});
   
   const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [selectedImagePreview, setSelectedImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -74,11 +79,32 @@ const Wizard = () => {
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
+    setSelectedImage(file);
+    const objectUrl = URL.createObjectURL(file);
+    setSelectedImagePreview(objectUrl);
+  };
 
+  const handleImageSubmit = async () => {
+    if (!selectedImage) return;
+
+    const file = selectedImage;
+    const preview = selectedImagePreview;
+    
+    // Clear selection UI immediately
+    setSelectedImage(null);
+    setSelectedImagePreview(null);
+    
     setIsProcessing(true);
+    setProcessingStep('Compressing image securely...');
+    
+    // Add user message with image
+    const newMessages = [...messages, { role: 'user' as const, content: 'Uploaded a medical bill for analysis.', image: preview || undefined }];
+    setMessages(newMessages);
+    
     try {
       const options = {
         maxSizeMB: 1,
@@ -87,6 +113,7 @@ const Wizard = () => {
       };
       const compressedFile = await imageCompression(file, options);
       
+      setProcessingStep('AI is reading the bill...');
       const formData = new FormData();
       formData.append('file', compressedFile);
       const API_URL = import.meta.env.VITE_API_URL || '';
@@ -94,10 +121,22 @@ const Wizard = () => {
         method: 'POST',
         body: formData
       });
+      
+      setProcessingStep('Finalizing extraction...');
       const data = await res.json();
       if (data.extracted_data) {
         const ext = data.extracted_data;
         const msg = `I uploaded a bill. Extracted Data -> Hospital: ${ext.hospitalName || 'unknown'}, Amount: ${ext.totalAmount || 'unknown'}, Income: ${ext.grossIncome || 'unknown'}, Household Size: ${ext.householdSize || 'unknown'}.`;
+        
+        // Remove the temporary image message and replace with the text message so the AI can process it
+        // Actually, we can just keep the image message in UI, and silently send the extracted text to the backend!
+        // To do this, we just call sendMessage without adding it to UI again, or we can just call sendMessage with the text.
+        setMessages(prev => {
+           const withoutLast = prev.slice(0, prev.length - 1);
+           return [...withoutLast, { role: 'user', content: msg, image: preview || undefined }];
+        });
+        
+        setIsProcessing(false); // sendMessage will set it to true again
         await sendMessage(msg);
       }
     } catch (error) {
@@ -134,6 +173,9 @@ const Wizard = () => {
                 className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div className={`max-w-[80%] p-5 rounded-3xl ${m.role === 'user' ? 'bg-brand-primary text-white rounded-tr-sm' : 'bg-brand-surface border border-brand-primary/10 text-brand-text rounded-tl-sm shadow-sm'}`}>
+                  {m.image && (
+                    <img src={m.image} alt="Uploaded bill" className="w-48 h-auto rounded-xl mb-3 border border-white/20 shadow-sm" />
+                  )}
                   <p className="leading-relaxed font-medium">{m.content}</p>
                 </div>
               </motion.div>
@@ -141,9 +183,14 @@ const Wizard = () => {
             
             {isProcessing && !evaluation && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
-                <div className="bg-brand-surface border border-brand-primary/10 p-5 rounded-3xl rounded-tl-sm shadow-sm flex items-center space-x-3">
-                  <Loader2 className="w-5 h-5 text-brand-accent animate-spin" />
-                  <span className="text-brand-text/70 font-medium text-sm">Processing securely...</span>
+                <div className="bg-brand-surface border border-brand-primary/10 p-5 rounded-3xl rounded-tl-sm shadow-sm flex flex-col space-y-2">
+                  <div className="flex items-center space-x-3">
+                    <Loader2 className="w-5 h-5 text-brand-accent animate-spin" />
+                    <span className="text-brand-text/70 font-medium text-sm">Processing securely...</span>
+                  </div>
+                  {processingStep && (
+                    <span className="text-brand-accent font-medium text-xs ml-8">{processingStep}</span>
+                  )}
                 </div>
               </motion.div>
             )}
@@ -185,8 +232,37 @@ const Wizard = () => {
         </div>
 
         {/* Input Area */}
-        <div className="p-6 bg-brand-surface border-t border-brand-primary/5">
-          <form onSubmit={(e) => { e.preventDefault(); sendMessage(); }} className="flex items-end gap-4 relative">
+        <div className="p-6 bg-brand-surface border-t border-brand-primary/5 relative">
+          
+          {/* Floating Image Preview */}
+          <AnimatePresence>
+            {selectedImagePreview && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="absolute bottom-[calc(100%+1rem)] left-6 bg-white p-3 rounded-2xl shadow-xl border border-brand-primary/10 flex flex-col gap-3"
+              >
+                <div className="relative">
+                  <img src={selectedImagePreview} alt="Preview" className="w-32 h-32 object-cover rounded-xl border border-brand-primary/5" />
+                  <button 
+                    onClick={() => { setSelectedImage(null); setSelectedImagePreview(null); }}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shadow-sm"
+                  >
+                    ×
+                  </button>
+                </div>
+                <button 
+                  onClick={handleImageSubmit}
+                  className="bg-brand-accent text-white py-2 rounded-xl text-sm font-bold shadow-sm hover:bg-brand-accent/90 transition flex justify-center items-center gap-2"
+                >
+                  <Send className="w-4 h-4" /> Send Bill
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <form onSubmit={(e) => { e.preventDefault(); sendMessage(); }} className="flex items-center gap-4 relative">
             <div className="relative flex-1">
               <textarea 
                 rows={2}
@@ -198,7 +274,7 @@ const Wizard = () => {
                 disabled={isProcessing || !!evaluation}
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                <input type="file" id="bill-upload" onChange={handleImageUpload} className="hidden" accept="image/*" disabled={isProcessing || !!evaluation} />
+                <input type="file" id="bill-upload" onChange={handleImageSelect} className="hidden" accept="image/*" disabled={isProcessing || !!evaluation} />
                 <label htmlFor="bill-upload" className={`p-2 rounded-full flex items-center justify-center transition cursor-pointer ${isProcessing || !!evaluation ? 'text-gray-300' : 'text-brand-primary hover:bg-brand-primary/10'}`}>
                   <Camera className="w-6 h-6" />
                 </label>
