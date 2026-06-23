@@ -1,4 +1,4 @@
-
+import { Link } from 'react-router-dom';
 
 const PrivacyPolicyPage = () => {
   return (
@@ -61,7 +61,7 @@ const PrivacyPolicyPage = () => {
             Contact the Privacy Officer
           </h2>
           <p className="text-lg text-brand-text">
-            If you have any questions regarding your data privacy or wish to file a complaint, please contact our HIPAA Privacy Officer immediately at: <strong className="text-brand-primary">privacy@medclear.app</strong>
+            If you have any questions regarding your data privacy or wish to file a complaint, please reach out to our HIPAA Privacy Officer via our <Link to="/contact" className="text-brand-primary font-bold hover:underline">Contact Page</Link>.
           </p>
         </section>
       </div>
