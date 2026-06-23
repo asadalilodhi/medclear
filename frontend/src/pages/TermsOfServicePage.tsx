@@ -10,9 +10,9 @@ const TermsOfServicePage = () => {
 
       <div className="bg-brand-surface p-12 rounded-3xl border border-brand-primary/10 shadow-sm space-y-12">
         
-        <section className="bg-red-50 border-l-4 border-red-800 p-6 rounded-r-xl mb-12">
-          <h2 className="text-2xl font-bold text-red-800 font-heading mb-3">URGENT MEDICAL DISCLAIMER</h2>
-          <p className="text-lg text-red-900 leading-relaxed font-semibold">
+        <section className="bg-red-50 dark:bg-red-950/30 border-l-4 border-red-600 dark:border-red-500 p-6 rounded-r-xl mb-12">
+          <h2 className="text-2xl font-bold text-red-800 dark:text-red-400 font-heading mb-3">URGENT MEDICAL DISCLAIMER</h2>
+          <p className="text-lg text-red-900 dark:text-red-200 leading-relaxed font-semibold">
             MedClear is NOT for medical emergencies. If you are experiencing a medical emergency, please dial 911 or visit the nearest emergency room immediately. MedClear is a financial navigation tool, not a clinical triage service.
           </p>
         </section>

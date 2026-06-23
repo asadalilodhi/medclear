@@ -55,10 +55,13 @@ const PrivacyPolicyPage = () => {
           </p>
         </section>
 
-        <section className="bg-brand-accent/10 p-6 rounded-xl border border-brand-accent/30">
-          <h2 className="text-2xl font-bold text-brand-primary font-heading mb-3">Contact the Privacy Officer</h2>
-          <p className="text-lg text-brand-text/90">
-            If you have any questions regarding your data privacy or wish to file a complaint, please contact our HIPAA Privacy Officer immediately at: <strong>privacy@medclear.app</strong>
+        <section className="bg-brand-surface p-8 rounded-2xl border-2 border-brand-primary/20 shadow-sm mt-8">
+          <h2 className="text-2xl font-bold text-brand-primary font-heading mb-3 flex items-center gap-2">
+            <span className="w-2 h-6 bg-brand-accent rounded-full inline-block"></span>
+            Contact the Privacy Officer
+          </h2>
+          <p className="text-lg text-brand-text">
+            If you have any questions regarding your data privacy or wish to file a complaint, please contact our HIPAA Privacy Officer immediately at: <strong className="text-brand-primary">privacy@medclear.app</strong>
           </p>
         </section>
       </div>
