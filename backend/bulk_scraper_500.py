@@ -50,17 +50,26 @@ def scrape_hospital_smart(hospital_name: str):
     
     for attempt in range(3):
         try:
-            from duckduckgo_search import DDGS
-            results = DDGS().text(f"{hospital_name} financial assistance policy", max_results=3)
-            if not results:
-                print("  -> Search returned no results.")
-                break
+            import urllib.request
+            import urllib.parse
+            # pyrefly: ignore [missing-import]
+            from bs4 import BeautifulSoup
+            
+            data = urllib.parse.urlencode({'q': f'{hospital_name} financial assistance policy'}).encode('utf-8')
+            req = urllib.request.Request('https://lite.duckduckgo.com/lite/', data=data, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
+            try:
+                html = urllib.request.urlopen(req, timeout=10).read()
+                soup = BeautifulSoup(html, 'html.parser')
+                urls = [a.get('href') for a in soup.find_all('a', class_='result-link') if a.get('href') and a.get('href').startswith('http')]
+            except Exception as e:
+                print(f"  -> DDG Lite Search error: {e}")
+                urls = []
             
             # Find the first valid new URL
             url = None
-            for r in results:
-                href = r.get('href', '')
-                if href not in previous_urls and href.startswith("http"):
+            for r in urls:
+                href = r.strip()
+                if href and href not in previous_urls and href.startswith("http"):
                     url = href
                     break
             
@@ -68,7 +77,7 @@ def scrape_hospital_smart(hospital_name: str):
                 print("  -> Search returned no new/valid URLs.")
                 break
                 
-            print(f"  [Attempt {attempt+1}] Found URL via DDGS Search: {url}")
+            print(f"  [Attempt {attempt+1}] Found URL via DDG Lite: {url}")
             
             if not url.startswith("http"):
                 continue

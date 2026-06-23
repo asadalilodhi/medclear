@@ -1,7 +1,10 @@
 import os
 import time
+# pyrefly: ignore [missing-import]
 from openai import OpenAI
+# pyrefly: ignore [missing-import]
 from supabase import create_client
+# pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
 
 load_dotenv()
