@@ -23,7 +23,7 @@ const ContactPage = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
             <textarea name="message" rows={4} required className="w-full border border-gray-300 rounded-xl p-3 focus:ring-brand-sage focus:border-brand-sage outline-none"></textarea>
           </div>
-          <button type="submit" className="w-full bg-brand-navy text-white font-bold py-4 rounded-xl hover:bg-opacity-90 transition shadow-md">
+          <button type="submit" className="w-full bg-brand-primary text-white font-bold py-4 rounded-xl hover:bg-opacity-90 transition shadow-md">
             Send Message
           </button>
         </form>
